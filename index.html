@@ -458,24 +458,25 @@ function fillForm(d) {
 }
 
 function getClient() {
+  function gv(id){ var el=document.getElementById(id); return el?el.value:""; }
   return {
-    nombre: document.getElementById("f-nombre").value,
-    mes: document.getElementById("f-mes").value,
-    tcc: document.getElementById("f-tcc").value,
-    rent2024: document.getElementById("f-rent2024").value,
-    rent2024pct: document.getElementById("f-rent2024pct") ? document.getElementById("f-rent2024pct").value : "",
-    rent2025: document.getElementById("f-rent2025").value,
-    rent2025pct: document.getElementById("f-rent2025pct") ? document.getElementById("f-rent2025pct").value : "",
-    rentAnio: document.getElementById("f-rentAnio").value,
-    rentAnioPct: document.getElementById("f-rentAnioPct") ? document.getElementById("f-rentAnioPct").value : "",
-    rentTrimestre: document.getElementById("f-rentTrim").value,
-    rentTrimestrePct: document.getElementById("f-rentTrimPct") ? document.getElementById("f-rentTrimPct").value : "",
-    rentMes: document.getElementById("f-rentMes").value,
-    rentMesPct: document.getElementById("f-rentMesPct") ? document.getElementById("f-rentMesPct").value : "",
-    comentarios: document.getElementById("f-comentarios").value,
-    recomendaciones: document.getElementById("f-recomendaciones").value,
-    mercadoLocal: document.getElementById("f-local").value,
-    mercadoInternacional: document.getElementById("f-intl").value
+    nombre: gv("f-nombre"),
+    mes: gv("f-mes"),
+    tcc: gv("f-tcc"),
+    rent2024: gv("f-rent2024"),
+    rent2024pct: gv("f-rent2024pct"),
+    rent2025: gv("f-rent2025"),
+    rent2025pct: gv("f-rent2025pct"),
+    rentAnio: gv("f-rentAnio"),
+    rentAnioPct: gv("f-rentAnioPct"),
+    rentTrimestre: gv("f-rentTrim"),
+    rentTrimestrePct: gv("f-rentTrimPct"),
+    rentMes: gv("f-rentMes"),
+    rentMesPct: gv("f-rentMesPct"),
+    comentarios: gv("f-comentarios"),
+    recomendaciones: gv("f-recomendaciones"),
+    mercadoLocal: gv("f-local"),
+    mercadoInternacional: gv("f-intl")
   };
 }
 
