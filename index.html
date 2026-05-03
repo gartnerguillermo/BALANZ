@@ -317,14 +317,14 @@ function enviarWhatsApp(){
     return;
   }
   var total = posiciones.filter(function(p){return p.ticker;}).reduce(function(s,p){return s+(parseFloat(p.valorActual)||0);},0);
-  var msg = "Buen dia!\n\n"
-    + "Comparto el informe de la cartera correspondiente a *"+c.mes+"*.\n\n"
-    + "📊 *Patrimonio total:* USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0})+"\n";
-  if(c.rentMes) msg += "📈 *Último mes:* "+fUSD(c.rentMes)+"\n";
-  if(c.rentAnio) msg += "📅 *YTD 2026:* "+fUSD(c.rentAnio)+"\n";
-  msg += "\nAdjunto encontrarás el informe completo en PDF con el detalle de posiciones, flujos proyectados y comentarios del mes.\n\n"
-    + "Quedo a disposición para cualquier consulta. Saludos!\n\n"
-    + "*_GG Finanzas_*";
+  var msg = "Buen dia!\n"
+    + "Comparto el informe de la cartera correspondiente a "+c.mes+".\n"
+    + "📊 Patrimonio total: USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0})+" ";
+  if(c.rentMes) msg += "📈 Último mes: "+fUSD(c.rentMes)+" ";
+  if(c.rentAnio) msg += "📅 YTD 2026: "+fUSD(c.rentAnio);
+  msg += "\nAdjunto encontrarás el informe completo en PDF con el detalle de posiciones, flujos proyectados y comentarios del mes.\n"
+    + "Quedo a disposición para cualquier consulta. Saludos!\n"
+    + "GG Finanzas";
 
   // Modal para editar el mensaje
   var overlay = document.createElement("div");
