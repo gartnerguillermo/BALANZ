@@ -317,16 +317,28 @@ function enviarWhatsApp(){
     return;
   }
   var total = posiciones.filter(function(p){return p.ticker;}).reduce(function(s,p){return s+(parseFloat(p.valorActual)||0);},0);
-  var msg = "Hola "+c.nombre.split(" ")[0]+"! 👋\n\n"
-    + "Te comparto el informe de tu cartera correspondiente a *"+c.mes+"*.\n\n"
+  var msg = "Buen dia!\n\n"
+    + "Comparto el informe de la cartera correspondiente a *"+c.mes+"*.\n\n"
     + "📊 *Patrimonio total:* USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0})+"\n";
   if(c.rentMes) msg += "📈 *Último mes:* "+fUSD(c.rentMes)+"\n";
   if(c.rentAnio) msg += "📅 *YTD 2026:* "+fUSD(c.rentAnio)+"\n";
   msg += "\nAdjunto encontrarás el informe completo en PDF con el detalle de posiciones, flujos proyectados y comentarios del mes.\n\n"
-    + "Quedamos a disposición para cualquier consulta. Saludos! 🤝\n\n"
-    + "_Guillermo Gartner Finanzas_";
-  var url = "https://wa.me/"+tel+"?text="+encodeURIComponent(msg);
-  window.open(url, "_blank");
+    + "Quedo a disposición para cualquier consulta. Saludos!\n\n"
+    + "*_GG Finanzas_*";
+
+  // Modal para editar el mensaje
+  var overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center";
+  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:28px;width:90%;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,.2)">'
+    + '<div style="font-size:16px;font-weight:700;margin-bottom:6px">💬 Mensaje de WhatsApp</div>'
+    + '<div style="font-size:12px;color:#888;margin-bottom:14px">Editá el mensaje antes de enviarlo. El PDF lo adjuntás manualmente.</div>'
+    + '<textarea id="wa-msg" style="width:100%;height:220px;font-size:13px;padding:10px;border:1px solid #ddd;border-radius:8px;resize:vertical;line-height:1.6">'+msg+'</textarea>'
+    + '<div style="margin-top:8px;font-size:11px;color:#aaa">Número: '+tel+'</div>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">'
+    + '<button onclick="document.body.removeChild(this.closest(\'[style*=fixed]\'))" style="padding:8px 18px;border:1px solid #ccc;border-radius:7px;background:#fff;cursor:pointer">Cancelar</button>'
+    + '<button onclick="var m=document.getElementById(\'wa-msg\').value;document.body.removeChild(this.closest(\'[style*=fixed]\'));window.open(\'https://wa.me/'+tel+'?text=\'+encodeURIComponent(m),\'_blank\')" style="padding:8px 20px;background:#25D366;color:#fff;border:none;border-radius:7px;font-weight:600;cursor:pointer">Abrir WhatsApp →</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
 }
 
 // PDF BALANZ
