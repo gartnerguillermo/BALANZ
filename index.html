@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GG Finanzas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a1a;font-size:14px}
+input,select,textarea,button{font-family:inherit;font-size:13px}
+input,select,textarea{width:100%;padding:8px 11px;border:1px solid #ddd;border-radius:7px;background:#fff;color:#1a1a1a}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a1a1a}
+textarea{resize:vertical}
+button{cursor:pointer;padding:8px 18px;border:1px solid #ccc;border-radius:7px;background:#fff;color:#1a1a1a;font-weight:500}
+button:hover{background:#f0f0f0}
+button.primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+button.primary:hover{background:#333}
+button.danger{color:#c0392b}
+button.accent{background:#1e3a5f;color:#fff;border-color:#1e3a5f}
+button.accent:hover{background:#162d4a}
+.wrap{max-width:980px;margin:0 auto;padding:28px 20px}
+.card{background:#fff;border:1px solid #e4e4e4;border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.sec{font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{font-size:12px;color:#666;display:block;margin-bottom:5px;font-weight:500}
+table{width:100%;border-collapse:collapse}
+th{background:#f7f7f7;padding:7px 10px;font-size:11px;font-weight:600;color:#777;border-bottom:2px solid #eee;white-space:nowrap}
+td{padding:6px 10px;font-size:12px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+.topbar{background:#111;color:#fff;padding:16px 28px;display:flex;justify-content:space-between;align-items:center}
+.topbar .brand{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.4;margin-bottom:3px}
+.topbar .title{font-size:19px;font-weight:700}
+.topbar .actions{display:flex;gap:8px;align-items:center}
+.topbar button{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff}
+.topbar button:hover{background:rgba(255,255,255,.2)}
+.topbar button.primary{background:#fff;color:#111}
+.topbar button.accent{background:#1e3a5f;border-color:#1e3a5f;color:#fff}
+.group-hdr td{background:#f9f9f9;font-size:10px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:1px;padding:10px 10px 5px!important}
+.hidden{display:none}
+.drop-zone{border:2px dashed #ccc;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:.2s;background:#fafafa}
+.drop-zone:hover,.drop-zone.drag{border-color:#1e3a5f;background:#f0f4f8}
+.drop-zone .icon{font-size:32px;margin-bottom:8px}
+.drop-zone .dtitle{font-size:14px;font-weight:600;margin-bottom:3px}
+.drop-zone .sub{font-size:12px;color:#aaa}
+.progress{background:#eee;border-radius:20px;height:5px;margin-top:12px;overflow:hidden;display:none}
+.progress-bar{background:#1e3a5f;height:100%;border-radius:20px;transition:width .3s}
+.res-ok{color:#1e7e34;font-size:13px;font-weight:600;margin-top:10px;display:none}
+.res-err{color:#c0392b;font-size:13px;font-weight:600;margin-top:10px;display:none}
+</style>
+</head>
+<body>
+
+<!-- LISTA -->
+<div id="view-list">
+  <div class="topbar">
+    <div><div class="brand">Guillermo Gartner Finanzas</div><div class="title">Mis clientes</div></div>
+    <div class="actions"><button onclick="newClient()">+ Nuevo cliente</button></div>
+  </div>
+  <div class="wrap">
+    <div id="client-list"></div>
+    <div id="empty-msg" class="card" style="text-align:center;padding:3rem;color:#aaa">
+      <div style="font-size:32px;margin-bottom:10px">📋</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:6px">No hay clientes guardados</div>
+      <div style="font-size:13px">Creá un cliente nuevo para empezar.</div>
+    </div>
+  </div>
+</div>
+
+<!-- FORMULARIO -->
+<div id="view-form" class="hidden">
+  <div class="topbar">
+    <div>
+      <div class="brand" style="cursor:pointer" onclick="goList()">← Mis clientes</div>
+      <div class="title" id="form-title">Nuevo cliente</div>
+    </div>
+    <div class="actions">
+      <span id="saving-msg" style="font-size:12px;opacity:.6"></span>
+      <button onclick="saveClient()">Guardar</button>
+      <button class="primary" onclick="goPreview()">Ver informe →</button>
+    </div>
+  </div>
+  <div class="wrap">
+
+    <div class="card">
+      <div class="sec">Importar PDF de BALANZ</div>
+      <div class="drop-zone" id="pdf-drop"
+        onclick="document.getElementById('pdf-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');procesarPDF(event.dataTransfer.files[0])">
+        <div class="icon">📄</div>
+        <div class="dtitle">Arrastrá el PDF de BALANZ acá</div>
+        <div class="sub">o hacé clic para seleccionar</div>
+        <div class="progress" id="pdf-prog"><div class="progress-bar" id="pdf-bar" style="width:0%"></div></div>
+      </div>
+      <input type="file" id="pdf-input" accept=".pdf" class="hidden" onchange="procesarPDF(this.files[0])">
+      <div class="res-ok" id="pdf-ok"></div>
+      <div class="res-err" id="pdf-err"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec">Datos del cliente</div>
+      <div class="grid3">
+        <div><label>Nombre del cliente</label><input id="f-nombre"></div>
+        <div><label>Mes del informe</label><input id="f-mes" placeholder="Ej: Marzo 2026"></div>
+        <div><label>Tipo de cambio MEP</label><input id="f-tcc" type="number" placeholder="Auto desde PDF"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec">Rentabilidad (USD)</div>
+      <div class="grid2" style="margin-bottom:14px">
+        <div>
+          <label>Rendimiento 2024 (USD)</label><input id="f-rent2024" type="number">
+          <label style="margin-top:6px">Rendimiento 2024 (%)</label><input id="f-rent2024pct" type="number" placeholder="Ej: 12.3">
+        </div>
+        <div>
+          <label>Rendimiento 2025 (USD)</label><input id="f-rent2025" type="number">
+          <label style="margin-top:6px">Rendimiento 2025 (%)</label><input id="f-rent2025pct" type="number" placeholder="Ej: -3.1">
+        </div>
+      </div>
+      <div style="border-top:1px solid #f0f0f0;padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Año en curso (2026)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+          <div>
+            <label>YTD (USD)</label><input id="f-rentAnio" type="number">
+            <label style="margin-top:6px">YTD (%)</label><input id="f-rentAnioPct" type="number" placeholder="Ej: -0.8">
+          </div>
+          <div>
+            <label>Último trimestre (USD)</label><input id="f-rentTrim" type="number">
+            <label style="margin-top:6px">Último trimestre (%)</label><input id="f-rentTrimPct" type="number" placeholder="Ej: -3.6">
+          </div>
+          <div>
+            <label>Último mes (USD)</label><input id="f-rentMes" type="number">
+            <label style="margin-top:6px">Último mes (%)</label><input id="f-rentMesPct" type="number" placeholder="Ej: -4.7">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="sec" style="margin:0">Posiciones <span id="pos-count" style="font-size:11px;color:#ccc;font-weight:400;margin-left:6px"></span></div>
+        <button onclick="addPos()">+ Agregar fila</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="text-align:left;width:80px">Ticker</th>
+            <th style="text-align:left">Descripción</th>
+            <th style="text-align:left;width:105px">Tipo</th>
+            <th style="text-align:right;width:90px">Cantidad</th>
+            <th style="text-align:right;width:130px">Val. Actual (USD)</th>
+            <th style="width:30px"></th>
+          </tr></thead>
+          <tbody id="pos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec">Proyección de flujos — Importar Excel</div>
+      <div class="drop-zone" id="xls-drop"
+        onclick="document.getElementById('xls-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');procesarExcel(event.dataTransfer.files[0])">
+        <div class="icon">📊</div>
+        <div class="dtitle">Arrastrá el Excel de pagos acá</div>
+        <div class="sub">o hacé clic · Columnas: Ticker, Fecha, Renta, Amortización, Total</div>
+      </div>
+      <input type="file" id="xls-input" accept=".xlsx,.xls" class="hidden" onchange="procesarExcel(this.files[0])">
+      <div class="res-ok" id="xls-ok"></div>
+      <div class="res-err" id="xls-err"></div>
+      <div id="flujos-preview"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec">Comentarios y recomendaciones</div>
+      <div style="background:#f0f4f8;border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:#1e3a5f;margin-bottom:6px">✨ Generar con IA (via Claude.ai)</div>
+        <div style="font-size:12px;color:#666;margin-bottom:10px">1. Hacé clic en "Copiar resumen" · 2. Pegalo en Claude.ai · 3. Copiá la respuesta en los campos de abajo</div>
+        <button class="accent" onclick="copiarResumenIA()">📋 Copiar resumen de cartera</button>
+        <span id="resumen-status" style="font-size:12px;color:#1e7e34;margin-left:10px;display:none">✓ Copiado!</span>
+      </div>
+      <div class="grid2">
+        <div><label>Comentarios del mes</label><textarea id="f-comentarios" rows="5"></textarea></div>
+        <div><label>Recomendaciones / próximos pasos</label><textarea id="f-recomendaciones" rows="5"></textarea></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div><label>Mercado local</label><textarea id="f-local" rows="4"></textarea></div>
+        <div><label>Mercado internacional</label><textarea id="f-intl" rows="4"></textarea></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="saveClient()">Guardar</button>
+      <button class="primary" onclick="goPreview()">Ver informe →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW -->
+<div id="view-preview" class="hidden">
+  <div class="topbar">
+    <div><div class="brand">Guillermo Gartner Finanzas</div><div class="title" id="prev-title">Informe</div></div>
+    <div class="actions">
+      <button onclick="goForm()">← Editar</button>
+      <button onclick="goList()">Mis clientes</button>
+      <button class="accent" onclick="downloadPDF()">⬇ Descargar PDF</button>
+    </div>
+  </div>
+  <div class="wrap"><div id="preview-content"></div></div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const TIPOS = ["Acciones","Bonos","Cedears","Corporativos","Fondos"];
+const MESES_NOM = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const STORAGE_KEY = "gg_finanzas_v4";
+let allData = JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+let currentId = null, posiciones = [], flujosExcel = [];
+
+function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(allData)); }
+const fUSD = v => { const n=parseFloat(v); if(isNaN(n)) return "—"; return (n<0?"-":"")+"USD "+Math.abs(n).toLocaleString("es-AR",{maximumFractionDigits:0}); };
+const show = id => ["view-list","view-form","view-preview"].forEach(v => document.getElementById(v).classList[v===id?"remove":"add"]("hidden"));
+
+// ── PDF BALANZ ─────────────────────────────────────────────────────────────
+async function procesarPDF(file) {
+  if(!file || file.type !== "application/pdf") return;
+  const prog=document.getElementById("pdf-prog"), bar=document.getElementById("pdf-bar");
+  const ok=document.getElementById("pdf-ok"), err=document.getElementById("pdf-err");
+  ok.style.display="none"; err.style.display="none";
+  prog.style.display="block"; bar.style.width="10%";
+  try {
+    const buf = await file.arrayBuffer();
+    bar.style.width="40%";
+    const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+    bar.style.width="60%";
+    let txt = "";
+    for(let i=1; i<=pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      let lastY = null;
+      for(const item of tc.items) {
+        const y = Math.round(item.transform[5]);
+        if(lastY !== null && Math.abs(y-lastY) > 5) txt += "\n";
+        txt += item.str + " ";
+        lastY = y;
+      }
+      txt += "\n";
+    }
+    bar.style.width="80%";
+    parsearBALANZ(txt, ok, err);
+    bar.style.width="100%";
+    setTimeout(() => prog.style.display="none", 600);
+  } catch(e) {
+    prog.style.display="none";
+    err.textContent = "⚠ Error: " + e.message;
+    err.style.display = "block";
+  }
+}
+
+function parsearBALANZ(text, ok, err) {
+  const nomM = text.match(/Cuenta\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]+?)\s+Fecha/);
+  if(nomM && !document.getElementById("f-nombre").value) {
+    document.getElementById("f-nombre").value = nomM[1].trim().replace(/\s+/g," ");
+    document.getElementById("form-title").textContent = nomM[1].trim().replace(/\s+/g," ");
+  }
+  const fechM = text.match(/Fecha resumen\s+(\d{2})\/(\d{2})\/(\d{4})/);
+  if(fechM && !document.getElementById("f-mes").value) {
+    const meses=["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    document.getElementById("f-mes").value = meses[parseInt(fechM[2])]+" "+fechM[3];
+  }
+  const mepM = text.match(/MEP\s*\$\s*([\d.]+,\d+)/);
+  let tcc = 1422;
+  if(mepM) tcc = parseFloat(mepM[1].replace(/\./g,"").replace(",","."));
+  const esUSD = /u\$s/i.test(text);
+  document.getElementById("f-tcc").value = esUSD ? "1" : tcc.toFixed(2);
+
+  const newPos = [];
+  const lines = text.split(/\n/);
+  let tipoActual = null;
+  for(let i=0; i<lines.length; i++) {
+    const line = lines[i].trim();
+    if(!line) continue;
+    if(TIPOS.includes(line)) { tipoActual = line; continue; }
+    const ti = TIPOS.find(t => line === t || (line.startsWith(t+" ") && !line.startsWith("$")));
+    if(ti) { tipoActual = ti; continue; }
+    if(!tipoActual) continue;
+    if(/Especie|Descripci|Cantidad|Garantía|Precio|Valor Actual|BALANZ|Corrientes|concertaci|La informaci|valuaci|Distribuci/i.test(line)) continue;
+    let ticker, desc, cant, valorActual;
+    if(esUSD) {
+      const m = line.match(/^([A-Z][A-Z0-9._]{0,9})\s+(.+?)\s+([\d.]+,\d{2})\s+0[.,]00\s+u\$s\s+[\d.,]+\s+u\$s\s+([\d.,]+)\s*$/i);
+      if(m) { ticker=m[1].trim(); desc=m[2].trim().replace(/\s+/g," "); cant=parseFloat(m[3].replace(/\./g,"").replace(",",".")); valorActual=parseFloat(m[4].replace(/\./g,"").replace(",",".")); }
+    } else {
+      const m = line.match(/^([A-Z][A-Z0-9._]{0,9})\s+(.+?)\s+([\d.]+,\d{2})\s+0[.,]00\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)\s*$/);
+      if(m) { ticker=m[1].trim(); desc=m[2].trim().replace(/\s+/g," "); cant=parseFloat(m[3].replace(/\./g,"").replace(",",".")); valorActual=parseFloat(m[5].replace(/\./g,"").replace(",","."))/tcc; }
+    }
+    if(ticker && valorActual > 0) newPos.push({ticker, descripcion:desc, tipo:tipoActual, nominales:cant.toString(), valorActual:valorActual.toFixed(2)});
+  }
+  if(newPos.length > 0) {
+    posiciones = newPos; renderPosTbody();
+    const total = newPos.reduce((s,p) => s+(parseFloat(p.valorActual)||0), 0);
+    ok.textContent = "✓ "+newPos.length+" posiciones · Total USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0});
+    ok.style.display = "block";
+  } else {
+    err.textContent = "⚠ No se encontraron posiciones.";
+    err.style.display = "block";
+  }
+}
+
+// ── EXCEL ──────────────────────────────────────────────────────────────────
+function procesarExcel(file) {
+  if(!file) return;
+  const ok=document.getElementById("xls-ok"), err=document.getElementById("xls-err");
+  ok.style.display="none"; err.style.display="none";
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:"binary", cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:0, raw:false});
+      flujosExcel = rows.map(function(r) {
+        let fecha = r["Fecha"]||r["fecha"]||r["FECHA"]||"";
+        if(fecha instanceof Date) fecha = fecha.toISOString().split("T")[0];
+        else fecha = String(fecha).trim();
+        return {
+          ticker: String(r["Ticker"]||r["ticker"]||"").trim(),
+          fecha: fecha,
+          renta: parseFloat(String(r["Renta"]||r["renta"]||0).replace(",","."))||0,
+          amort: parseFloat(String(r["Amortización"]||r["Amortizacion"]||0).replace(",","."))||0,
+          total: parseFloat(String(r["Total"]||r["total"]||0).replace(",","."))||0
+        };
+      }).filter(function(r){ return r.ticker && r.fecha; });
+      ok.textContent = "✓ "+flujosExcel.length+" pagos importados";
+      ok.style.display = "block";
+      renderFlujosPreview();
+    } catch(e2) {
+      err.textContent = "⚠ Error: "+e2.message;
+      err.style.display = "block";
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function renderFlujosPreview() {
+  const hoy = new Date(), en12 = new Date(hoy);
+  en12.setMonth(en12.getMonth()+12);
+  const agr = {};
+  flujosExcel.forEach(function(f) {
+    if(!f.fecha) return;
+    const d = new Date(f.fecha);
+    if(isNaN(d)||d<hoy||d>en12) return;
+    const key = f.fecha.substring(0,7);
+    if(!agr[key]) agr[key] = {renta:0, amort:0, total:0, tickers:[]};
+    agr[key].renta += f.renta; agr[key].amort += f.amort; agr[key].total += f.total;
+    if(!agr[key].tickers.includes(f.ticker)) agr[key].tickers.push(f.ticker);
+  });
+  const keys = Object.keys(agr).sort();
+  if(!keys.length) { document.getElementById("flujos-preview").innerHTML = '<div style="color:#aaa;font-size:13px;margin-top:10px">Sin flujos en los próximos 12 meses.</div>'; return; }
+  const totalAnual = keys.reduce(function(s,k){ return s+agr[k].total; }, 0);
+  let html = '<div style="margin-top:16px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase">Próximos 12 meses</span><span style="font-size:14px;font-weight:700;color:#1e3a5f">Total: USD '+totalAnual.toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2})+'</span></div>';
+  html += '<table><thead><tr><th style="text-align:left">Mes</th><th style="text-align:right">Renta</th><th style="text-align:right">Amort.</th><th style="text-align:right">Total</th><th style="text-align:left">Instrumentos</th></tr></thead><tbody>';
+  keys.forEach(function(k) {
+    const parts = k.split("-"), g = agr[k];
+    const pct = totalAnual>0 ? Math.round(g.total/totalAnual*100) : 0;
+    html += '<tr><td style="font-weight:600">'+MESES_NOM[parseInt(parts[1])-1]+' '+parts[0]+'</td>';
+    html += '<td style="text-align:right">USD '+g.renta.toFixed(2)+'</td>';
+    html += '<td style="text-align:right">'+(g.amort>0?"USD "+g.amort.toFixed(2):"—")+'</td>';
+    html += '<td style="text-align:right;font-weight:700;color:#1e3a5f">USD '+g.total.toFixed(2)+'</td>';
+    html += '<td><div style="display:flex;align-items:center;gap:8px"><div style="background:#e8f0f8;border-radius:3px;height:6px;flex:1"><div style="background:#1e3a5f;border-radius:3px;height:6px;width:'+pct+'%"></div></div><span style="font-size:10px;color:#aaa">'+g.tickers.join(", ")+'</span></div></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById("flujos-preview").innerHTML = html;
+}
+
+// ── IA RESUMEN ─────────────────────────────────────────────────────────────
+function copiarResumenIA() {
+  const c = getClient();
+  const sorted = posiciones.filter(function(p){ return p.ticker; }).sort(function(a,b){ return TIPOS.indexOf(a.tipo)-TIPOS.indexOf(b.tipo); });
+  const total = sorted.reduce(function(s,p){ return s+(parseFloat(p.valorActual)||0); }, 0);
+  const comp = TIPOS.map(function(t) {
+    const val = sorted.filter(function(p){ return p.tipo===t; }).reduce(function(s,p){ return s+(parseFloat(p.valorActual)||0); }, 0);
+    return {name:t, value:val};
+  }).filter(function(x){ return x.value>0; });
+  const hoy = new Date(), en3 = new Date(hoy);
+  en3.setMonth(en3.getMonth()+3);
+  const fl3 = flujosExcel.filter(function(f){ const d=new Date(f.fecha); return !isNaN(d)&&d>=hoy&&d<=en3; });
+  const totalFl3 = fl3.reduce(function(s,f){ return s+f.total; }, 0);
+
+  const txt = "Soy asesor financiero y necesito que redactes en español profesional los siguientes textos para el informe mensual de mi cliente. Respondé con exactamente 4 secciones:\n\nCOMENTARIOS DEL MES:\n(3-4 oraciones sobre el desempeño de la cartera)\n\nRECOMENDACIONES:\n(3-4 oraciones con acciones concretas)\n\nMERCADO LOCAL:\n(2-3 oraciones sobre el contexto argentino)\n\nMERCADO INTERNACIONAL:\n(2-3 oraciones sobre el contexto global)\n\nDATOS:\n- Cliente: "+c.nombre+"\n- Mes: "+c.mes+"\n- Patrimonio: USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0})+"\n- Rend. 2024: "+(c.rent2024?"USD "+c.rent2024:"N/D")+"\n- Rend. 2025: "+(c.rent2025?"USD "+c.rent2025:"N/D")+"\n- YTD 2026: "+(c.rentAnio?"USD "+c.rentAnio:"N/D")+"\n- Último mes: "+(c.rentMes?"USD "+c.rentMes:"N/D")+"\n\nCOMPOSICIÓN:\n"+comp.map(function(cx){ return "- "+cx.name+": USD "+cx.value.toLocaleString("es-AR",{maximumFractionDigits:0})+" ("+( total>0?(cx.value/total*100).toFixed(1):0)+"%)"; }).join("\n")+"\n\nPRINCIPALES POSICIONES:\n"+sorted.slice(0,12).map(function(p){ return "- "+p.ticker+" ("+p.tipo+"): USD "+(parseFloat(p.valorActual)||0).toLocaleString("es-AR",{maximumFractionDigits:0}); }).join("\n")+"\n\nFLUJOS PRÓXIMOS 3 MESES: USD "+totalFl3.toFixed(2)+"\n"+fl3.map(function(f){ return "- "+f.ticker+": USD "+f.total.toFixed(2)+" — "+f.fecha; }).join("\n");
+
+  navigator.clipboard.writeText(txt).then(function() {
+    const s = document.getElementById("resumen-status");
+    s.style.display = "inline";
+    setTimeout(function(){ s.style.display="none"; }, 4000);
+  });
+}
+
+// ── LISTA ──────────────────────────────────────────────────────────────────
+function renderList() {
+  show("view-list");
+  const ids = Object.keys(allData);
+  document.getElementById("empty-msg").style.display = ids.length ? "none" : "block";
+  document.getElementById("client-list").innerHTML = ids.map(function(id) {
+    const d=allData[id], c=d.client||{};
+    const total = (d.posiciones||[]).reduce(function(s,p){ return s+(parseFloat(p.valorActual)||0); }, 0);
+    return '<div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:17px;font-weight:700">'+(c.nombre||"Sin nombre")+'</div><div style="font-size:12px;color:#aaa;margin-top:3px">'+(c.mes||"—")+' · USD '+total.toLocaleString("es-AR",{maximumFractionDigits:0})+' · '+((d.posiciones||[]).filter(function(p){ return p.ticker; }).length)+' posiciones</div></div><div style="display:flex;gap:8px"><button class="primary" onclick="openClient(\''+id+'\')">Abrir →</button><button class="danger" onclick="deleteClient(\''+id+'\')">Eliminar</button></div></div>';
+  }).join("");
+}
+
+function goList() { saveClient(); renderList(); }
+function deleteClient(id) { if(!confirm("¿Eliminar?")) return; delete allData[id]; persist(); renderList(); }
+
+function newClient() {
+  currentId = "c_"+Date.now(); posiciones = []; flujosExcel = [];
+  fillForm({client:{}}); show("view-form");
+}
+
+function openClient(id) {
+  currentId = id;
+  const d = allData[id];
+  posiciones = d.posiciones||[]; flujosExcel = d.flujosExcel||[];
+  fillForm(d); show("view-form");
+}
+
+function fillForm(d) {
+  const c = d.client||{};
+  document.getElementById("f-nombre").value = c.nombre||"";
+  document.getElementById("f-mes").value = c.mes||"";
+  document.getElementById("f-tcc").value = c.tcc||"";
+  document.getElementById("f-rent2024").value = c.rent2024||"";
+  if(document.getElementById("f-rent2024pct")) document.getElementById("f-rent2024pct").value = c.rent2024pct||"";
+  document.getElementById("f-rent2025").value = c.rent2025||"";
+  if(document.getElementById("f-rent2025pct")) document.getElementById("f-rent2025pct").value = c.rent2025pct||"";
+  document.getElementById("f-rentAnio").value = c.rentAnio||"";
+  if(document.getElementById("f-rentAnioPct")) document.getElementById("f-rentAnioPct").value = c.rentAnioPct||"";
+  document.getElementById("f-rentTrim").value = c.rentTrimestre||"";
+  if(document.getElementById("f-rentTrimPct")) document.getElementById("f-rentTrimPct").value = c.rentTrimestrePct||"";
+  document.getElementById("f-rentMes").value = c.rentMes||"";
+  if(document.getElementById("f-rentMesPct")) document.getElementById("f-rentMesPct").value = c.rentMesPct||"";
+  document.getElementById("f-comentarios").value = c.comentarios||"";
+  document.getElementById("f-recomendaciones").value = c.recomendaciones||"";
+  document.getElementById("f-local").value = c.mercadoLocal||"";
+  document.getElementById("f-intl").value = c.mercadoInternacional||"";
+  document.getElementById("form-title").textContent = c.nombre||"Nuevo cliente";
+  document.getElementById("pdf-ok").style.display = "none";
+  document.getElementById("pdf-err").style.display = "none";
+  document.getElementById("xls-ok").style.display = "none";
+  document.getElementById("xls-err").style.display = "none";
+  document.getElementById("flujos-preview").innerHTML = "";
+  if(flujosExcel.length) renderFlujosPreview();
+  renderPosTbody();
+}
+
+function getClient() {
+  return {
+    nombre: document.getElementById("f-nombre").value,
+    mes: document.getElementById("f-mes").value,
+    tcc: document.getElementById("f-tcc").value,
+    rent2024: document.getElementById("f-rent2024").value,
+    rent2024pct: document.getElementById("f-rent2024pct") ? document.getElementById("f-rent2024pct").value : "",
+    rent2025: document.getElementById("f-rent2025").value,
+    rent2025pct: document.getElementById("f-rent2025pct") ? document.getElementById("f-rent2025pct").value : "",
+    rentAnio: document.getElementById("f-rentAnio").value,
+    rentAnioPct: document.getElementById("f-rentAnioPct") ? document.getElementById("f-rentAnioPct").value : "",
+    rentTrimestre: document.getElementById("f-rentTrim").value,
+    rentTrimestrePct: document.getElementById("f-rentTrimPct") ? document.getElementById("f-rentTrimPct").value : "",
+    rentMes: document.getElementById("f-rentMes").value,
+    rentMesPct: document.getElementById("f-rentMesPct") ? document.getElementById("f-rentMesPct").value : "",
+    comentarios: document.getElementById("f-comentarios").value,
+    recomendaciones: document.getElementById("f-recomendaciones").value,
+    mercadoLocal: document.getElementById("f-local").value,
+    mercadoInternacional: document.getElementById("f-intl").value
+  };
+}
+
+function saveClient() {
+  allData[currentId] = {client:getClient(), posiciones:posiciones, flujosExcel:flujosExcel};
+  persist();
+  const m = document.getElementById("saving-msg");
+  m.textContent = "✓ Guardado";
+  setTimeout(function(){ m.textContent=""; }, 2000);
+}
+function goForm() { show("view-form"); }
+
+function renderPosTbody() {
+  const sorted = [...posiciones].sort(function(a,b){ return TIPOS.indexOf(a.tipo)-TIPOS.indexOf(b.tipo); });
+  document.getElementById("pos-count").textContent = posiciones.filter(function(p){ return p.ticker; }).length+" instrumentos";
+  document.getElementById("pos-tbody").innerHTML = sorted.map(function(p,si) {
+    const oi = posiciones.indexOf(p);
+    const isG = si===0 || sorted[si-1].tipo!==p.tipo;
+    const v = parseFloat(p.valorActual)||0;
+    return (isG ? '<tr class="group-hdr"><td colspan="6">'+p.tipo+'</td></tr>' : '') +
+      '<tr><td><input value="'+(p.ticker||"")+'" onchange="posiciones['+oi+'].ticker=this.value" style="width:75px;font-weight:600"></td>' +
+      '<td><input value="'+(p.descripcion||"")+'" onchange="posiciones['+oi+'].descripcion=this.value"></td>' +
+      '<td><select onchange="posiciones['+oi+'].tipo=this.value;renderPosTbody()">'+TIPOS.map(function(t){ return '<option'+(t===p.tipo?' selected':'')+'>'+t+'</option>'; }).join('')+'</select></td>' +
+      '<td><input type="number" style="text-align:right;width:85px" value="'+(p.nominales||"")+'" onchange="posiciones['+oi+'].nominales=this.value"></td>' +
+      '<td style="text-align:right;font-weight:600;color:#1e3a5f">USD '+v.toLocaleString("es-AR",{maximumFractionDigits:0})+'</td>' +
+      '<td><button class="danger" onclick="delPos('+oi+')" style="padding:3px 8px;font-size:11px">✕</button></td></tr>';
+  }).join("");
+}
+function addPos() { posiciones.push({ticker:"",descripcion:"",tipo:"ON",nominales:"",valorActual:""}); renderPosTbody(); }
+function delPos(i) { posiciones.splice(i,1); renderPosTbody(); }
+
+// ── PREVIEW ────────────────────────────────────────────────────────────────
+function goPreview() {
+  saveClient();
+  const c = getClient();
+  document.getElementById("prev-title").textContent = c.nombre+" — "+c.mes;
+  const sorted = posiciones.filter(function(p){ return p.ticker; }).sort(function(a,b){ return TIPOS.indexOf(a.tipo)-TIPOS.indexOf(b.tipo); });
+  const getV = function(p){ return parseFloat(p.valorActual)||0; };
+  const comp = TIPOS.map(function(t) {
+    return {name:t, value:sorted.filter(function(p){ return p.tipo===t; }).reduce(function(s,p){ return s+getV(p); }, 0)};
+  }).filter(function(x){ return x.value>0; });
+  const total = comp.reduce(function(s,x){ return s+x.value; }, 0);
+  const posByTipo = TIPOS.map(function(t){ return {tipo:t, items:sorted.filter(function(p){ return p.tipo===t; })}; }).filter(function(g){ return g.items.length; });
+  const PCOLS = ["#111","#1e3a5f","#6c757d","#6c3483","#1e7e34"];
+
+  const metrica = function(l,v) {
+    if(!v) return "";
+    const n=parseFloat(v), pos=n>=0;
+    return '<div style="flex:1;min-width:130px;background:#fff;border:1px solid #e4e4e4;border-radius:10px;padding:12px 16px;border-top:3px solid '+(pos?"#1e7e34":"#c0392b")+'">' +
+      '<div style="font-size:10px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">'+l+'</div>' +
+      '<div style="font-size:18px;font-weight:700;color:'+(pos?"#1e7e34":"#c0392b")+'">'+fUSD(v)+'</div></div>';
+  };
+
+  const hoy=new Date(), en12=new Date(hoy); en12.setMonth(en12.getMonth()+12);
+  const agr = {};
+  flujosExcel.forEach(function(f) {
+    if(!f.fecha) return;
+    const d = new Date(f.fecha);
+    if(isNaN(d)||d<hoy||d>en12) return;
+    const key = f.fecha.substring(0,7);
+    if(!agr[key]) agr[key]={renta:0,amort:0,total:0,tickers:[]};
+    agr[key].renta+=f.renta; agr[key].amort+=f.amort; agr[key].total+=f.total;
+    if(!agr[key].tickers.includes(f.ticker)) agr[key].tickers.push(f.ticker);
+  });
+  const flKeys = Object.keys(agr).sort();
+  const totalFlujos = flKeys.reduce(function(s,k){ return s+agr[k].total; }, 0);
+
+  document.getElementById("preview-content").innerHTML =
+    '<div style="background:#111;color:#fff;padding:28px 32px;border-radius:12px;display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px">' +
+      '<div><div style="font-size:10px;letter-spacing:2px;opacity:.35;text-transform:uppercase;margin-bottom:8px">Guillermo Gartner Finanzas</div>' +
+      '<div style="font-size:26px;font-weight:700">'+(c.nombre||"Cliente")+'</div>' +
+      '<div style="font-size:13px;opacity:.45;margin-top:4px">Informe '+(c.mes||"—")+'</div></div>' +
+      '<div style="text-align:right"><div style="font-size:11px;opacity:.35;margin-bottom:4px">Patrimonio total</div>' +
+      '<div style="font-size:32px;font-weight:700">USD '+total.toLocaleString("es-AR",{maximumFractionDigits:0})+'</div></div></div>' +
+
+    '<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">'+
+      metrica("Rendimiento 2024",c.rent2024)+metrica("Rendimiento 2025",c.rent2025)+
+      metrica("YTD 2026",c.rentAnio)+metrica("Último trimestre",c.rentTrimestre)+metrica("Último mes",c.rentMes)+
+    '</div>' +
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">' +
+      '<div class="card"><div class="sec">Composición de cartera</div>' +
+        '<canvas id="pie-canvas" style="width:100%"></canvas>' +
+        '<div style="margin-top:12px">'+comp.map(function(cx,i){
+          return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:13px">' +
+            '<span style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:2px;background:'+PCOLS[i]+';display:inline-block"></span>'+cx.name+'</span>' +
+            '<span><strong>'+(total>0?(cx.value/total*100).toFixed(1):0)+'%</strong><span style="color:#bbb;font-size:11px;margin-left:8px">'+fUSD(cx.value)+'</span></span></div>';
+        }).join('')+'</div></div>' +
+      '<div class="card"><div class="sec">Detalle de posiciones</div>' +
+        '<table><thead><tr><th style="text-align:left">Ticker</th><th style="text-align:left">Descripción</th><th style="text-align:right">Val. USD</th><th style="text-align:right">%</th></tr></thead><tbody>' +
+        posByTipo.map(function(g){
+          return '<tr class="group-hdr"><td colspan="4">'+g.tipo+'</td></tr>'+
+            g.items.map(function(p){
+              const v=getV(p), pct=total>0?(v/total*100).toFixed(1):0;
+              return '<tr><td style="font-weight:700">'+p.ticker+'</td><td style="color:#666;font-size:11px">'+p.descripcion+'</td>' +
+                '<td style="text-align:right;font-weight:600">USD '+v.toLocaleString("es-AR",{maximumFractionDigits:0})+'</td>' +
+                '<td style="text-align:right"><span style="background:#f0f4f8;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600;color:#1e3a5f">'+pct+'%</span></td></tr>';
+            }).join('');
+        }).join('') +
+        '<tr style="background:#f9f9f9"><td colspan="2" style="font-weight:700">Total</td><td style="text-align:right;font-weight:700">USD '+total.toLocaleString("es-AR",{maximumFractionDigits:0})+'</td><td></td></tr>' +
+        '</tbody></table></div></div>' +
+
+    (flKeys.length ?
+      '<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
+        '<div class="sec" style="margin:0">Proyección de flujos — próximos 12 meses</div>' +
+        '<div style="font-size:14px;font-weight:700;color:#1e3a5f">Total: USD '+totalFlujos.toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2})+'</div></div>' +
+        '<table><thead><tr><th style="text-align:left">Mes</th><th style="text-align:right">Renta</th><th style="text-align:right">Amort.</th><th style="text-align:right">Total</th><th style="text-align:left">Instrumentos</th></tr></thead><tbody>' +
+        flKeys.map(function(k){
+          const parts=k.split("-"), g=agr[k], pct=totalFlujos>0?Math.round(g.total/totalFlujos*100):0;
+          return '<tr><td style="font-weight:600">'+MESES_NOM[parseInt(parts[1])-1]+' '+parts[0]+'</td>' +
+            '<td style="text-align:right">USD '+g.renta.toFixed(2)+'</td>' +
+            '<td style="text-align:right">'+(g.amort>0?"USD "+g.amort.toFixed(2):"—")+'</td>' +
+            '<td style="text-align:right;font-weight:700;color:#1e3a5f">USD '+g.total.toFixed(2)+'</td>' +
+            '<td><div style="display:flex;align-items:center;gap:8px"><div style="background:#e8f0f8;border-radius:3px;height:6px;flex:1"><div style="background:#1e3a5f;border-radius:3px;height:6px;width:'+pct+'%"></div></div>' +
+            '<span style="font-size:10px;color:#aaa">'+g.tickers.join(", ")+'</span></div></td></tr>';
+        }).join('') +
+        '<tr style="background:#f0f4f8"><td style="font-weight:700">TOTAL</td>' +
+        '<td style="text-align:right;font-weight:700">USD '+flKeys.reduce(function(s,k){ return s+agr[k].renta; },0).toFixed(2)+'</td>' +
+        '<td style="text-align:right;font-weight:700">USD '+flKeys.reduce(function(s,k){ return s+agr[k].amort; },0).toFixed(2)+'</td>' +
+        '<td style="text-align:right;font-weight:700;color:#1e3a5f">USD '+totalFlujos.toFixed(2)+'</td><td></td></tr>' +
+        '</tbody></table></div>' : "") +
+
+    ((c.mercadoLocal||c.mercadoInternacional) ?
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">' +
+        (c.mercadoLocal ? '<div class="card"><div class="sec">Mercado local</div><p style="font-size:13px;line-height:1.8;color:#444">'+c.mercadoLocal.replace(/\n/g,"<br>")+'</p></div>' : "") +
+        (c.mercadoInternacional ? '<div class="card"><div class="sec">Mercado internacional</div><p style="font-size:13px;line-height:1.8;color:#444">'+c.mercadoInternacional.replace(/\n/g,"<br>")+'</p></div>' : "") +
+      '</div>' : "") +
+
+    ((c.comentarios||c.recomendaciones) ?
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">' +
+        (c.comentarios ? '<div class="card"><div class="sec">Comentarios del mes</div><p style="font-size:13px;line-height:1.8;color:#444">'+c.comentarios.replace(/\n/g,"<br>")+'</p></div>' : "") +
+        (c.recomendaciones ? '<div class="card"><div class="sec">Recomendaciones</div><p style="font-size:13px;line-height:1.8;color:#444">'+c.recomendaciones.replace(/\n/g,"<br>")+'</p></div>' : "") +
+      '</div>' : "");
+
+  drawPie(comp, PCOLS, total);
+  show("view-preview");
+}
+
+function drawPie(comp, colors, total) {
+  const c = document.getElementById("pie-canvas"); if(!c) return;
+  const W=c.offsetWidth||320, H=180; c.width=W; c.height=H;
+  const ctx=c.getContext("2d"), cx=W/2, cy=H/2, r=Math.min(cx,cy)-8;
+  let start = -Math.PI/2;
+  comp.forEach(function(d,i) {
+    const s = (d.value/total)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+s);
+    ctx.closePath(); ctx.fillStyle=colors[i%colors.length]; ctx.fill();
+    ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke(); start+=s;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,r*.52,0,Math.PI*2); ctx.fillStyle="#fff"; ctx.fill();
+  ctx.fillStyle="#111"; ctx.font="bold 12px Segoe UI,Arial";
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("USD "+Math.round(total).toLocaleString("es-AR"), cx, cy);
+}
+
+// ── PDF ────────────────────────────────────────────────────────────────────
+function downloadPDF() {
+  const doc = new window.jspdf.jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+  const W=210, M=16, CW=W-M*2;
+  const NEGRO=[17,17,17], AZUL=[30,58,95], AZUL_CLARO=[235,242,252];
+  const c = getClient();
+  const sorted = posiciones.filter(function(p){ return p.ticker; }).sort(function(a,b){ return TIPOS.indexOf(a.tipo)-TIPOS.indexOf(b.tipo); });
+  const getV = function(p){ return parseFloat(p.valorActual)||0; };
+  const comp = TIPOS.map(function(t){
+    return {name:t, value:sorted.filter(function(p){ return p.tipo===t; }).reduce(function(s,p){ return s+getV(p); },0)};
+  }).filter(function(x){ return x.value>0; });
+  const total = comp.reduce(function(s,x){ return s+x.value; },0);
+
+  function fN(v) { var n=parseFloat(v); if(isNaN(n)) return "—"; return (n<0?"-":"")+"USD "+Math.abs(n).toLocaleString("es-AR",{maximumFractionDigits:0}); }
+  function gCol(v) { var n=parseFloat(v); return n>=0?[30,126,52]:[192,57,43]; }
+
+  function hdr(title) {
+    doc.setFillColor(NEGRO[0],NEGRO[1],NEGRO[2]); doc.rect(0,0,W,20,"F");
+    doc.setFillColor(AZUL[0],AZUL[1],AZUL[2]); doc.rect(0,20,W,2,"F");
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont("helvetica","normal");
+    doc.setTextColor(160,160,160); doc.text("GG FINANZAS", M, 8);
+    doc.setFontSize(12); doc.setFont("helvetica","bold");
+    doc.setTextColor(255,255,255); doc.text(title, M, 16);
+    doc.setFontSize(8); doc.setFont("helvetica","normal");
+    doc.setTextColor(160,160,160); doc.text((c.nombre||"")+" — "+(c.mes||""), W-M, 16, {align:"right"});
+  }
+
+  function ftr(num, label) {
+    doc.setFillColor(NEGRO[0],NEGRO[1],NEGRO[2]); doc.rect(0,287,W,10,"F");
+    doc.setTextColor(130,130,130); doc.setFontSize(7); doc.setFont("helvetica","normal");
+    doc.text("Informe confidencial — "+(c.nombre||""), M, 293);
+    doc.text(label, W/2, 293, {align:"center"});
+    doc.text("Pág. "+num, W-M, 293, {align:"right"});
+  }
+
+  function secTit(y, txt) {
+    doc.setFillColor(AZUL[0],AZUL[1],AZUL[2]); doc.rect(M,y,CW,7,"F");
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont("helvetica","bold");
+    doc.text(txt.toUpperCase(), M+3, y+4.8);
+    return y+9;
+  }
+
+  // ── HOJA 1: RESUMEN ──────────────────────────────────────────────────────
+  hdr("RESUMEN EJECUTIVO");
+  var y = 30;
+
+  // Portada
+  doc.setFillColor(NEGRO[0],NEGRO[1],NEGRO[2]); doc.roundedRect(M,y,CW,42,3,3,"F");
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(8); doc.setFont("helvetica","normal");
+  doc.setTextColor(160,160,160); doc.text("INFORME MENSUAL DE CARTERA", W/2, y+9, {align:"center"});
+  doc.setFontSize(20); doc.setFont("helvetica","bold");
+  doc.setTextColor(255,255,255); doc.text(c.nombre||"Cliente", W/2, y+21, {align:"center"});
+  doc.setFontSize(11); doc.setFont("helvetica","normal");
+  doc.setTextColor(180,200,230); doc.text(c.mes||"—", W/2, y+31, {align:"center"});
+  doc.setFontSize(8); doc.setTextColor(120,150,190); doc.text("Guillermo Gartner Finanzas", W/2, y+39, {align:"center"});
+  y += 50;
+
+  // Patrimonio
+  doc.setFillColor(AZUL_CLARO[0],AZUL_CLARO[1],AZUL_CLARO[2]); doc.roundedRect(M,y,CW,18,3,3,"F");
+  doc.setDrawColor(AZUL[0],AZUL[1],AZUL[2]); doc.setLineWidth(.5); doc.roundedRect(M,y,CW,18,3,3,"S");
+  doc.setTextColor(80,80,80); doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.text("PATRIMONIO TOTAL", M+5, y+7);
+  doc.setTextColor(NEGRO[0],NEGRO[1],NEGRO[2]); doc.setFontSize(17); doc.setFont("helvetica","bold");
+  doc.text("USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0}), M+5, y+15);
+  y += 26;
+
+  // Métricas
+  y = secTit(y, "Análisis de Rentabilidad");
+  var mets = [[c.rent2024,"Rendimiento 2024"],[c.rent2025,"Rendimiento 2025"],[c.rentAnio,"YTD 2026"],[c.rentTrimestre,"Último trimestre"],[c.rentMes,"Último mes"]].filter(function(x){ return x[0]; });
+  if(mets.length) {
+    var cols = Math.min(mets.length,3), mw = (CW-(cols-1)*4)/cols;
+    for(var mi=0; mi<mets.length; mi++) {
+      var v=mets[mi][0], l=mets[mi][1];
+      var row=Math.floor(mi/cols), col=mi%cols;
+      var x=M+col*(mw+4), ry=y+row*20;
+      var cc=gCol(v);
+      doc.setFillColor(250,250,250); doc.roundedRect(x,ry,mw,17,2,2,"F");
+      doc.setDrawColor(cc[0],cc[1],cc[2]); doc.setLineWidth(.7); doc.line(x,ry,x+mw,ry);
+      doc.setTextColor(130,130,130); doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.text(l.toUpperCase(), x+3, ry+6);
+      doc.setTextColor(cc[0],cc[1],cc[2]); doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.text(fN(v), x+3, ry+13);
+    }
+    y += Math.ceil(mets.length/3)*20 + 6;
+  }
+
+  ftr(1, "Resumen Ejecutivo");
+
+  // ── HOJA 2: COMPOSICIÓN ──────────────────────────────────────────────────
+  doc.addPage(); hdr("COMPOSICIÓN Y DETALLE DE CARTERA"); y=28;
+
+  y = secTit(y, "Composición de Cartera");
+  var PCOLS_R = [[17,17,17],[30,58,95],[100,100,100],[80,40,120],[30,126,52]];
+  var barW2 = CW-80;
+  for(var ci=0; ci<comp.length; ci++) {
+    var cx2=comp[ci], pct2=total>0?cx2.value/total:0, cc2=PCOLS_R[ci%PCOLS_R.length];
+    doc.setFillColor(225,225,225); doc.roundedRect(M+55,y+2,barW2,5,1,1,"F");
+    doc.setFillColor(cc2[0],cc2[1],cc2[2]); doc.roundedRect(M+55,y+2,barW2*pct2,5,1,1,"F");
+    doc.setTextColor(30,30,30); doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.text(cx2.name, M+2, y+6);
+    doc.setFont("helvetica","bold"); doc.text((pct2*100).toFixed(1)+"%", M+53, y+6, {align:"right"});
+    doc.setTextColor(100,100,100); doc.setFont("helvetica","normal"); doc.text(fN(cx2.value), M+CW, y+6, {align:"right"});
+    doc.setDrawColor(238,238,238); doc.line(M,y+9,M+CW,y+9); y+=10;
+  }
+  doc.setFillColor(AZUL_CLARO[0],AZUL_CLARO[1],AZUL_CLARO[2]); doc.rect(M,y,CW,8,"F");
+  doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]); doc.setFontSize(9); doc.setFont("helvetica","bold");
+  doc.text("TOTAL", M+2, y+5.5); doc.text(fN(total), M+CW, y+5.5, {align:"right"}); y+=14;
+
+  y = secTit(y, "Detalle de Posiciones");
+  for(var ti=0; ti<TIPOS.length; ti++) {
+    var tipo=TIPOS[ti], items=sorted.filter(function(p){ return p.tipo===tipo; });
+    if(!items.length) continue;
+    if(y>255) { doc.addPage(); hdr("COMPOSICIÓN Y DETALLE (cont.)"); y=28; }
+    doc.setFillColor(AZUL_CLARO[0],AZUL_CLARO[1],AZUL_CLARO[2]); doc.rect(M,y,CW,6,"F");
+    doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]); doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.text(tipo.toUpperCase(), M+2, y+4.2); y+=7;
+    doc.setTextColor(120,120,120); doc.setFontSize(7); doc.setFont("helvetica","normal");
+    doc.text("Ticker",M+2,y+3); doc.text("Descripción",M+22,y+3);
+    doc.text("Cant.",M+115,y+3,{align:"right"}); doc.text("Val. USD",M+148,y+3,{align:"right"}); doc.text("% Cart.",M+CW,y+3,{align:"right"});
+    doc.setDrawColor(200,200,200); doc.line(M,y+4,M+CW,y+4); y+=6;
+    for(var ii=0; ii<items.length; ii++) {
+      if(y>270) { doc.addPage(); hdr("COMPOSICIÓN Y DETALLE (cont.)"); y=28; }
+      var p=items[ii], pv=getV(p), ppct=total>0?(pv/total*100).toFixed(1):0;
+      doc.setFillColor(ii%2===0?255:249, ii%2===0?255:249, ii%2===0?255:252); doc.rect(M,y,CW,7,"F");
+      doc.setTextColor(17,17,17); doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.text(p.ticker,M+2,y+4.8);
+      doc.setFont("helvetica","normal"); doc.setTextColor(70,70,70); doc.text(doc.splitTextToSize(p.descripcion||"",88)[0],M+22,y+4.8);
+      doc.setTextColor(50,50,50); doc.text(parseFloat(p.nominales||0).toLocaleString("es-AR",{maximumFractionDigits:0}),M+115,y+4.8,{align:"right"});
+      doc.setTextColor(NEGRO[0],NEGRO[1],NEGRO[2]); doc.setFont("helvetica","bold"); doc.text("USD "+pv.toLocaleString("es-AR",{maximumFractionDigits:0}),M+148,y+4.8,{align:"right"});
+      doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]); doc.text(ppct+"%",M+CW,y+4.8,{align:"right"}); y+=7;
+    }
+    y+=4;
+  }
+  ftr(2, "Composición y Detalle");
+
+  // ── HOJA 3: COMENTARIOS ──────────────────────────────────────────────────
+  doc.addPage(); hdr("COMENTARIOS Y RECOMENDACIONES"); y=28;
+  var bloques = [
+    ["Comentarios del Mes", c.comentarios],
+    ["Recomendaciones / Próximos Pasos", c.recomendaciones],
+    ["Contexto Mercado Local", c.mercadoLocal],
+    ["Contexto Mercado Internacional", c.mercadoInternacional]
+  ].filter(function(b){ return b[1] && b[1].trim(); });
+
+  for(var bi=0; bi<bloques.length; bi++) {
+    if(y>230) { doc.addPage(); hdr("COMENTARIOS Y RECOMENDACIONES (cont.)"); y=28; }
+    y = secTit(y, bloques[bi][0]);
+    y += 3;
+    doc.setTextColor(40,40,40); doc.setFontSize(9); doc.setFont("helvetica","normal");
+    var lines = doc.splitTextToSize(bloques[bi][1].trim(), CW-6);
+    for(var li=0; li<lines.length; li++) {
+      if(y>272) { doc.addPage(); hdr("COMENTARIOS Y RECOMENDACIONES (cont.)"); y=28; }
+      doc.text(lines[li], M+3, y); y+=5.5;
+    }
+    y+=8;
+  }
+  ftr(3, "Comentarios y Recomendaciones");
+
+  // ── HOJA 4: FLUJOS ───────────────────────────────────────────────────────
+  doc.addPage(); hdr("FLUJO DE FONDOS PROYECTADO"); y=28;
+  var hoy2=new Date(), en12=new Date(hoy2); en12.setMonth(en12.getMonth()+12);
+  var agr2={};
+  flujosExcel.forEach(function(f) {
+    if(!f.fecha) return;
+    var d=new Date(f.fecha);
+    if(isNaN(d)||d<hoy2||d>en12) return;
+    var key=f.fecha.substring(0,7);
+    if(!agr2[key]) agr2[key]={renta:0,amort:0,total:0,tickers:[]};
+    agr2[key].renta+=f.renta; agr2[key].amort+=f.amort; agr2[key].total+=f.total;
+    if(!agr2[key].tickers.includes(f.ticker)) agr2[key].tickers.push(f.ticker);
+  });
+  var flKeys2=Object.keys(agr2).sort();
+
+  if(flKeys2.length) {
+    var totAnual=flKeys2.reduce(function(s,k){ return s+agr2[k].total; },0);
+    var totRenta=flKeys2.reduce(function(s,k){ return s+agr2[k].renta; },0);
+    var totAmort=flKeys2.reduce(function(s,k){ return s+agr2[k].amort; },0);
+
+    doc.setFillColor(AZUL_CLARO[0],AZUL_CLARO[1],AZUL_CLARO[2]); doc.roundedRect(M,y,CW,16,3,3,"F");
+    doc.setDrawColor(AZUL[0],AZUL[1],AZUL[2]); doc.setLineWidth(.5); doc.roundedRect(M,y,CW,16,3,3,"S");
+    doc.setTextColor(80,80,80); doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.text("TOTAL INGRESOS PROYECTADOS — PRÓXIMOS 12 MESES", M+4, y+6);
+    doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]); doc.setFontSize(15); doc.setFont("helvetica","bold");
+    doc.text("USD "+totAnual.toFixed(2), M+4, y+13);
+    doc.setTextColor(100,100,100); doc.setFontSize(8); doc.setFont("helvetica","normal");
+    doc.text("Renta: USD "+totRenta.toFixed(2)+"   Amort.: USD "+totAmort.toFixed(2), W-M-3, y+13, {align:"right"});
+    y+=22;
+
+    y = secTit(y, "Detalle Mensual de Flujos");
+    doc.setTextColor(120,120,120); doc.setFontSize(7); doc.setFont("helvetica","bold");
+    doc.text("MES",M+2,y+3); doc.text("RENTA",M+60,y+3,{align:"right"});
+    doc.text("AMORTIZACIÓN",M+105,y+3,{align:"right"}); doc.text("TOTAL",M+145,y+3,{align:"right"});
+    doc.text("INSTRUMENTOS",M+CW,y+3,{align:"right"});
+    doc.setDrawColor(200,200,200); doc.line(M,y+4,M+CW,y+4); y+=7;
+
+    var maxT=Math.max.apply(null, flKeys2.map(function(k){ return agr2[k].total; }));
+    for(var fi=0; fi<flKeys2.length; fi++) {
+      if(y>268) { doc.addPage(); hdr("FLUJO DE FONDOS (cont.)"); y=28; }
+      var fk=flKeys2[fi], fg=agr2[fk], fp=fk.split("-");
+      var fpct=maxT>0?fg.total/maxT:0;
+      if(fi%2===0){ doc.setFillColor(248,251,255); doc.rect(M,y,CW,9,"F"); }
+      doc.setFillColor(AZUL_CLARO[0],AZUL_CLARO[1],AZUL_CLARO[2]); doc.rect(M,y,CW*fpct*0.25,9,"F");
+      doc.setTextColor(17,17,17); doc.setFontSize(9); doc.setFont("helvetica","bold");
+      doc.text(MESES_NOM[parseInt(fp[1])-1]+" "+fp[0], M+2, y+6);
+      doc.setFont("helvetica","normal"); doc.setTextColor(70,70,70);
+      doc.text("USD "+fg.renta.toFixed(2), M+60, y+6, {align:"right"});
+      doc.text(fg.amort>0?"USD "+fg.amort.toFixed(2):"—", M+105, y+6, {align:"right"});
+      doc.setTextColor(AZUL[0],AZUL[1],AZUL[2]); doc.setFont("helvetica","bold");
+      doc.text("USD "+fg.total.toFixed(2), M+145, y+6, {align:"right"});
+      doc.setTextColor(130,130,130); doc.setFont("helvetica","normal"); doc.setFontSize(7);
+      doc.text(fg.tickers.join(", "), M+CW, y+6, {align:"right"});
+      doc.setDrawColor(235,235,235); doc.line(M,y+9,M+CW,y+9); y+=9;
+    }
+    y+=2;
+    doc.setFillColor(AZUL[0],AZUL[1],AZUL[2]); doc.rect(M,y,CW,9,"F");
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont("helvetica","bold");
+    doc.text("TOTAL ANUAL", M+2, y+6);
+    doc.text("USD "+totRenta.toFixed(2), M+60, y+6, {align:"right"});
+    doc.text("USD "+totAmort.toFixed(2), M+105, y+6, {align:"right"});
+    doc.text("USD "+totAnual.toFixed(2), M+145, y+6, {align:"right"});
+  } else {
+    doc.setTextColor(150,150,150); doc.setFontSize(11); doc.setFont("helvetica","normal");
+    doc.text("No hay flujos cargados para los próximos 12 meses.", W/2, 120, {align:"center"});
+  }
+  ftr(4, "Flujo de Fondos Proyectado");
+
+  doc.save("Informe_"+(c.nombre||"cliente").replace(/\s+/g,"_")+"_"+(c.mes||"").replace(/\s+/g,"_")+".pdf");
+}
+
+renderList();
+</script>
+</body>
+</html>
