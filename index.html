@@ -332,6 +332,26 @@ async function procesarPDF(file){
 }
 
 function parsearBALANZ(text,ok,err){
+  // Limpiar texto: eliminar líneas de pie de página y encabezados BALANZ
+  var lineas = text.split(/\n/);
+  var limpias = [];
+  for(var i=0;i<lineas.length;i++){
+    var l=lineas[i].trim();
+    if(!l) continue;
+    if(/BALANZ|Corrientes|concertaci|La informaci|valuaci|CNV|CUIT|Av\.|IGJ|ALYC|cuotapartista/i.test(l)) continue;
+    if(/F U L L|F Posici|HOUSE|INVESTMENT/i.test(l)) continue;
+    if(/Especie|Descripci|Cantidad|Garantía|Precio|Valor Actual/i.test(l)) continue;
+    if(/Distribuci|Tipo de cambio|Evolución|Mes en curso|Instrumentos|Monedas/i.test(l)) continue;
+    if(/^\*\*|^N°|^Total |^Pesos|^Dólares|^US Dollar/i.test(l)) continue;
+    // Separar secciones pegadas al pie: "...HO U S ECedears" → "Cedears"
+    TIPOS.forEach(function(t){
+      var idx = l.indexOf(t);
+      if(idx>0){ l = l.substring(idx); }
+    });
+    limpias.push(l);
+  }
+  text = limpias.join("\n");
+
   var nomM=text.match(/Cuenta\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]+?)\s+Fecha/);
   if(nomM&&!gv("f-nombre")){
     sv("f-nombre",nomM[1].trim().replace(/\s+/g," "));
@@ -347,23 +367,35 @@ function parsearBALANZ(text,ok,err){
   if(mepM) tcc=parseFloat(mepM[1].replace(/\./g,"").replace(",","."));
   var esUSD=/u\$s/i.test(text);
   sv("f-tcc",esUSD?"1":tcc.toFixed(2));
+
   var newPos=[], lines=text.split(/\n/), tipoActual=null;
   for(var i=0;i<lines.length;i++){
     var line=lines[i].trim(); if(!line) continue;
+    // Detectar sección exacta
     if(TIPOS.includes(line)){tipoActual=line;continue;}
-    var ti=TIPOS.find(function(t){return line===t||(line.startsWith(t+" ")&&!line.startsWith("$"));});
-    if(ti){tipoActual=ti;continue;}
     if(!tipoActual) continue;
-    if(/Especie|Descripci|Cantidad|Garantía|Precio|Valor Actual|BALANZ|Corrientes|concertaci|La informaci|valuaci|Distribuci/i.test(line)) continue;
     var ticker,desc,cant,valorActual;
     if(esUSD){
+      // Formato: TICKER DESC CANT,00 0.00 u$s PRECIO u$s VALOR
       var m=line.match(/^([A-Z][A-Z0-9._]{0,9})\s+(.+?)\s+([\d.]+,\d{2})\s+0[.,]00\s+u\$s\s+[\d.,]+\s+u\$s\s+([\d.,]+)\s*$/i);
-      if(m){ticker=m[1].trim();desc=m[2].trim().replace(/\s+/g," ");cant=parseFloat(m[3].replace(/\./g,"").replace(",","."));valorActual=parseFloat(m[4].replace(/\./g,"").replace(",","."));}
+      if(m){
+        ticker=m[1].trim();
+        desc=m[2].trim().replace(/\s+/g," ");
+        cant=parseFloat(m[3].replace(/\./g,"").replace(",","."));
+        valorActual=parseFloat(m[4].replace(/\./g,"").replace(",","."));
+      }
     } else {
       var m2=line.match(/^([A-Z][A-Z0-9._]{0,9})\s+(.+?)\s+([\d.]+,\d{2})\s+0[.,]00\s+\$\s*([\d.,]+)\s+\$\s*([\d.,]+)\s*$/);
-      if(m2){ticker=m2[1].trim();desc=m2[2].trim().replace(/\s+/g," ");cant=parseFloat(m2[3].replace(/\./g,"").replace(",","."));valorActual=parseFloat(m2[5].replace(/\./g,"").replace(",","."))/tcc;}
+      if(m2){
+        ticker=m2[1].trim();
+        desc=m2[2].trim().replace(/\s+/g," ");
+        cant=parseFloat(m2[3].replace(/\./g,"").replace(",","."));
+        valorActual=parseFloat(m2[5].replace(/\./g,"").replace(",","."))/tcc;
+      }
     }
-    if(ticker&&valorActual>0) newPos.push({ticker:ticker,descripcion:desc,tipo:tipoActual,nominales:cant.toString(),valorActual:valorActual.toFixed(2)});
+    if(ticker&&valorActual>0&&!newPos.find(function(p){return p.ticker===ticker;})){
+      newPos.push({ticker:ticker,descripcion:desc,tipo:tipoActual,nominales:cant.toString(),valorActual:valorActual.toFixed(2)});
+    }
   }
   if(newPos.length>0){
     posiciones=newPos; renderPosTbody();
