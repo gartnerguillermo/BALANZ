@@ -109,6 +109,12 @@ td{padding:6px 10px;font-size:12px;border-bottom:1px solid #f2f2f2;vertical-alig
         <div><label>Mes del informe</label><input id="f-mes" placeholder="Ej: Abril 2026"></div>
         <div><label>TC MEP</label><input id="f-tcc" type="number"></div>
       </div>
+      <div style="margin-top:12px">
+        <div class="grid2">
+          <div><label>Teléfono WhatsApp (con código de país, sin +)</label><input id="f-telefono" placeholder="Ej: 5491155554444"></div>
+          <div><label>Email (opcional)</label><input id="f-email" placeholder="Ej: cliente@mail.com"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -226,6 +232,7 @@ td{padding:6px 10px;font-size:12px;border-bottom:1px solid #f2f2f2;vertical-alig
     <div class="actions">
       <button onclick="goForm()">← Editar</button>
       <button onclick="goList()">Mis clientes</button>
+      <button class="accent" onclick="enviarWhatsApp()" style="background:#25D366;border-color:#25D366">💬 Enviar por WhatsApp</button>
       <button class="accent" onclick="downloadPDF()">⬇ Descargar PDF</button>
     </div>
   </div>
@@ -250,6 +257,8 @@ function getClient(){
     nombre:    gv("f-nombre"),
     mes:       gv("f-mes"),
     tcc:       gv("f-tcc"),
+    telefono:  gv("f-telefono"),
+    email:     gv("f-email"),
     rent2024:     gv("f-rent2024"),
     rent2024pct:  gv("f-rent2024pct"),
     rent2025:     gv("f-rent2025"),
@@ -271,7 +280,9 @@ function sv(id,val){ var el=document.getElementById(id); if(el) el.value=val||""
 
 function fillForm(d){
   var c=d.client||{};
-  sv("f-nombre",c.nombre); sv("f-mes",c.mes); sv("f-tcc",c.tcc);
+  sv("f-nombre",c.nombre); sv("f-mes",c.mes);   sv("f-tcc",c.tcc);
+  sv("f-telefono",c.telefono);
+  sv("f-email",c.email);
   sv("f-rent2024",c.rent2024);     sv("f-rent2024pct",c.rent2024pct);
   sv("f-rent2025",c.rent2025);     sv("f-rent2025pct",c.rent2025pct);
   sv("f-rentAnio",c.rentAnio);     sv("f-rentAnioPct",c.rentAnioPct);
@@ -297,6 +308,26 @@ function saveClient(){
 }
 function goForm(){ show("view-form"); }
 function goList(){ saveClient(); renderList(); }
+
+function enviarWhatsApp(){
+  var c = getClient();
+  var tel = (c.telefono||"").replace(/\D/g,"");
+  if(!tel){
+    alert("Agregá el número de WhatsApp del cliente en la ficha antes de enviar.");
+    return;
+  }
+  var total = posiciones.filter(function(p){return p.ticker;}).reduce(function(s,p){return s+(parseFloat(p.valorActual)||0);},0);
+  var msg = "Hola "+c.nombre.split(" ")[0]+"! 👋\n\n"
+    + "Te comparto el informe de tu cartera correspondiente a *"+c.mes+"*.\n\n"
+    + "📊 *Patrimonio total:* USD "+total.toLocaleString("es-AR",{maximumFractionDigits:0})+"\n";
+  if(c.rentMes) msg += "📈 *Último mes:* "+fUSD(c.rentMes)+"\n";
+  if(c.rentAnio) msg += "📅 *YTD 2026:* "+fUSD(c.rentAnio)+"\n";
+  msg += "\nAdjunto encontrarás el informe completo en PDF con el detalle de posiciones, flujos proyectados y comentarios del mes.\n\n"
+    + "Quedamos a disposición para cualquier consulta. Saludos! 🤝\n\n"
+    + "_Guillermo Gartner Finanzas_";
+  var url = "https://wa.me/"+tel+"?text="+encodeURIComponent(msg);
+  window.open(url, "_blank");
+}
 
 // PDF BALANZ
 async function procesarPDF(file){
